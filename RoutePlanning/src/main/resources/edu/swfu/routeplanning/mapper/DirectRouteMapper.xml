@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="edu.swfu.routeplanning.mapper.DirectRouteMapper">
+  <resultMap id="BaseResultMap" type="edu.swfu.routeplanning.entity.DirectRoute">
+    <id column="route_id" jdbcType="VARCHAR" property="id" />
+    <result column="rn" jdbcType="INTEGER" property="rn" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="distance" jdbcType="INTEGER" property="distance" />
+    <result property="geometry" column="geometry" javaType="edu.swfu.gis.entity.TGeometry" jdbcType="STRUCT" />
+    <result column="stop_sn1" jdbcType="INTEGER" property="stopSn1" />
+    <result column="stop_sn2" jdbcType="INTEGER" property="stopSn2" />
+	<association property="stop1" javaType="edu.swfu.routeplanning.entity.BusStop">
+		<id column="stop_id1" property="id" />
+		<result column="stop_name1" jdbcType="VARCHAR" property="name"/>
+		<result column="stop_code1" jdbcType="VARCHAR" property="code"/>
+		<result column="stop_geo1" javaType="edu.swfu.gis.entity.TGeometry" jdbcType="STRUCT" property="geometry"/>
+	</association>    
+	<association property="stop2" javaType="edu.swfu.routeplanning.entity.BusStop">
+		<id column="stop_id2" property="id" />
+		<result column="stop_name2" jdbcType="VARCHAR" property="name"/>
+		<result column="stop_code2" jdbcType="VARCHAR" property="code"/>
+		<result column="stop_geo2" javaType="edu.swfu.gis.entity.TGeometry" jdbcType="STRUCT" property="geometry"/>
+	</association>    
+    <!-- 
+    <result property="geometry" column="geometry" javaType="edu.swfu.gis.entity.TGeometry" jdbcType="STRUCT" />
+    
+    <result property="geometry" column="geometry" javaType="oracle.spatial.geometry.JGeometry" jdbcType="STRUCT" />
+    --> 
+    
+  </resultMap>
+  
+  
+  <select id="selectDirect" resultMap="BaseResultMap" parameterType="java.util.Map">
+with
+  s1 as (select id stop_id1,name stop_name1,geometry stop_geo1,code stop_code1 from bus_stop s 
+          where sdo_nn(s.geometry,#{origin,javaType=oracle.spatial.geometry.JGeometry,jdbcType=STRUCT}
+                       , 'sdo_num_res=3 unit=m', 500) = 'TRUE'),
+  s2 as (select id stop_id2,name stop_name2,geometry stop_geo2,code stop_code2 from bus_stop s 
+          where sdo_nn(s.geometry,#{destination,javaType=oracle.spatial.geometry.JGeometry,jdbcType=STRUCT}
+                       , 'sdo_num_res=3 unit=m', 500) = 'TRUE'), 
+  rs1 as (select s1.*,rs.sn,rs.bus_route_id route_id from s1 
+          inner join bus_route_Stop rs on s1.stop_id1=rs.bus_stop_id
+         ), 
+  rs2 as (select s2.*,rs.sn,rs.bus_route_id route_id from s2 
+          inner join bus_route_Stop rs on s2.stop_id2=rs.bus_stop_id 
+         )
+ 
+select * from (        
+  select * from (         
+    select d.*,r.name,r.geometry from bus_route r inner join (
+      select rs1.stop_id1,rs1.sn stop_sn1,rs1.stop_name1,rs1.stop_code1,rs1.route_id,
+             rs2.stop_id2,rs2.sn stop_sn2,rs2.stop_name2,rs2.stop_code2
+             ,getDist(rs1.route_id,rs1.sn,rs2.sn) distance 
+        from rs1 inner join rs2 on rs1.route_id=rs2.route_id and rs1.sn&lt;rs2.sn
+    ) d on r.id=d.route_id
+  ) order by distance
+) where rownum&lt;11  
+  </select>
+  
+  <select id="selectTransfer1" resultMap="BaseResultMap" parameterType="java.util.Map">
+with
+  s1 as (select id stop_id1,name stop_name1,geometry stop_geo1 from bus_stop s 
+         where sdo_nn(s.geometry,#{origin,javaType=oracle.spatial.geometry.JGeometry,jdbcType=STRUCT}
+         			  , 'sdo_num_res=3 unit=m', 500) = 'TRUE'),
+  s2 as (select id stop_id2,name stop_name2,geometry stop_geo2 from bus_stop s 
+         where sdo_nn(s.geometry,#{destination,javaType=oracle.spatial.geometry.JGeometry,jdbcType=STRUCT}
+         			  , 'sdo_num_res=3 unit=m', 500) = 'TRUE'), 
+  rs1 as (select s1.*,rs.sn stop_sn1,rs.bus_route_id route_id,r.geometry route_geo 
+                 ,r.name route_name from s1 
+          inner join bus_route_Stop rs on s1.stop_id1=rs.bus_stop_id
+          inner join bus_route r on rs.bus_route_id=r.id
+         ), 
+  rs2 as (select s2.*,rs.sn stop_sn2,rs.bus_route_id route_id,r.geometry route_geo 
+                 ,r.name route_name from  s2 
+          inner join bus_route_Stop rs on s2.stop_id2=rs.bus_stop_id 
+          inner join bus_route r on rs.bus_route_id=r.id
+         ),
+  tr1 as (
+   select * from (
+    select rownum rn,dr13.stop_name1,dr13.route_name route_name13,dr13.stop_sn3,
+           dr13.stop_name3,dr13.stop_sn1,dr13.stop_id1,dr13.route_id route_id13,
+           dr13.stop_id3,dr13.route_geo route_geo13,dr13.stop_geo1,dr13.stop_geo3 stop_geo13,
+           dr42.stop_id4,dr42.stop_sn4,dr42.stop_name4,dr42.route_id route_id42,
+           dr42.route_name route_name42,dr42.stop_id2,dr42.stop_sn2,dr42.stop_name2,
+           dr42.route_geo route_geo32,dr42.stop_geo4,dr42.stop_geo2,dr13.distance distance13,
+           dr42.distance distance42
+      from (
+        select rs1.*,rs.bus_stop_id stop_id3,rs.sn stop_sn3,s.name stop_name3,s.geometry stop_geo3 
+              ,s.code stop_code3,getdist(rs1.route_id,rs1.stop_sn1,rs.sn) distance from rs1 
+         inner join bus_route_stop rs on rs1.route_id=rs.bus_route_id and rs1.stop_sn1&lt;rs.sn
+         inner join bus_stop s on rs.bus_stop_id=s.id
+      ) dr13 inner join ( 
+        select rs2.*,rs.bus_stop_id stop_id4,rs.sn stop_sn4,s.name stop_name4,s.geometry stop_geo4  
+              ,s.code stop_code4,getdist(rs2.route_id,rs.sn,rs2.stop_sn2) distance from rs2 
+          inner join bus_route_stop rs on rs2.route_id=rs.bus_route_id and rs2.stop_sn2&gt;rs.sn
+          inner join bus_stop s on rs.bus_stop_id=s.id
+      ) dr42 on dr13.route_id!=dr42.route_id and dr13.stop_code3=dr42.stop_code4
+      order by dr13.distance+dr42.distance
+   ) tr1 where rn&lt;11
+  )
+
+
+  select * from (
+    select rn,1 sn,tr1.stop_sn1,tr1.stop_id1,tr1.stop_name1,tr1.route_id13 id,tr1.route_name13 name
+          ,tr1.stop_sn3 stop_sn2,tr1.stop_id3 stop_id2,tr1.stop_name3 stop_name2,tr1.distance13 distance
+          ,tr1.route_geo13 geometry,tr1.stop_geo1,tr1.stop_geo13 stop_geo2 from tr1
+    union all 
+    select rn,2 sn,tr1.stop_sn4,tr1.stop_id4,tr1.stop_name4,tr1.route_id42,tr1.route_name42
+          ,tr1.stop_sn2,tr1.stop_id2,tr1.stop_name2,tr1.distance42  
+          ,tr1.route_geo32,tr1.stop_geo4,tr1.stop_geo2 from tr1
+  ) t order by rn,sn       
+
+  </select> 
+  
+  <select id="selectTransfer2" resultMap="BaseResultMap">
+with
+  s1 as (select id stop_id1,name stop_name1,geometry stop_geo1,code stop_code1 from bus_stop s 
+         where sdo_nn(s.geometry,#{origin,javaType=oracle.spatial.geometry.JGeometry,jdbcType=STRUCT}
+         			  , 'sdo_num_res=3 unit=m', 500) = 'TRUE'),
+  s2 as (select id stop_id2,name stop_name2,geometry stop_geo2,code stop_code2 from bus_stop s 
+         where sdo_nn(s.geometry,#{destination,javaType=oracle.spatial.geometry.JGeometry,jdbcType=STRUCT}
+         			  , 'sdo_num_res=3 unit=m', 500) = 'TRUE'), 
+  rs1 as (select s1.*,rs.sn stop_sn1,rs.bus_route_id route_id from s1 
+          inner join Bus_route_Stop rs on s1.stop_id1=rs.bus_stop_id), 
+  rs2 as (select s2.*,rs.sn stop_sn2,rs.bus_route_id route_id from s2 
+          inner join Bus_route_Stop rs on s2.stop_id2=rs.bus_stop_id),
+  vs  as (select rs.*,s.geometry stop_geo,s.name stop_name,s.code stop_code from bus_route_stop rs 
+          inner join bus_stop s on rs.bus_stop_id=s.id),
+  dr13 as (select /*+ index(vs IX_Bus_route_stop) +*/ rs1.*,vs.bus_stop_id stop_id3,vs.stop_code stop_code3
+                 ,vs.stop_name stop_name3,r.name route_name,vs.stop_geo stop_geo3,r.geometry route_geo
+                 ,vs.sn stop_sn3,getDist(rs1.route_id,rs1.stop_sn1,vs.sn) route_dist from rs1 
+           inner join vs on rs1.route_id=vs.bus_route_id and rs1.stop_sn1&lt;vs.sn
+           inner join bus_route r on rs1.route_id=r.id),
+  dr42 as (select /*+ index(vs IX_Bus_route_stop) +*/ rs2.*,vs.bus_stop_id stop_id4,vs.stop_code stop_code4
+                 ,vs.stop_name stop_name4,r.name route_name,vs.stop_geo stop_geo4,r.geometry route_geo
+                 ,vs.sn stop_sn4,getDist(rs2.route_id,vs.sn,rs2.stop_sn2) route_dist from rs2 
+           inner join vs on rs2.route_id=vs.bus_route_id and rs2.stop_sn2&gt;vs.sn
+           inner join bus_route r on rs2.route_id=r.id),
+
+  tr2 as (
+
+   select * from (
+    select rs5.stop_sn1,rs5.stop_name1,rs5.route_id13,rs5.route_name13,rs5.stop_sn3,rs5.stop_name3
+          ,rs5.stop_sn5,rs5.stop_name5,rs5.route_id56,r.name route_name56,rs6.stop_sn6,rs6.stop_name6
+          ,rs6.stop_sn4,rs6.stop_name4,rs6.route_id42,rs6.route_name42,rs6.stop_sn2,rs6.stop_name2
+          ,rs5.route_dist13,rs5.stop_geo1,rs5.stop_id1,rs5.route_geo13,rs5.stop_geo3,rs5.stop_id3
+          ,rs5.stop_geo5,rs5.stop_id5,r.geometry route_geo56,rs6.stop_geo6,rs6.stop_id6
+          ,rs6.route_dist42,rs6.stop_geo4,rs6.stop_id4,rs6.route_geo42,rs6.stop_geo2,rs6.stop_id2
+          ,rs5.stop_code1,rs5.stop_code3,rs5.stop_code5,rs6.stop_code6,rs6.stop_code4,rs6.stop_code2
+          ,getDist(r.id,rs5.stop_sn5,rs6.stop_sn6 ) route_dist56,rownum rn from (  
+      select dr13.stop_sn1,dr13.stop_name1,dr13.stop_code1,dr13.route_id route_id13,dr13.route_name route_name13
+            ,dr13.stop_sn3,dr13.stop_name3,dr13.stop_code3,vs.bus_route_id route_id56,dr13.route_dist route_dist13
+            ,vs.sn stop_sn5,vs.stop_name stop_name5,vs.stop_code stop_code5,dr13.stop_id1,dr13.stop_geo1
+            ,dr13.route_geo route_geo13,dr13.stop_id3,dr13.stop_geo3,vs.bus_stop_id stop_id5,vs.stop_geo stop_geo5 
+        from dr13 inner join vs on dr13.stop_code3=vs.stop_code and dr13.route_id!=vs.bus_route_id
+    ) rs5 inner join (
+      select vs.bus_route_id route_id56,vs.sn stop_sn6,vs.stop_name stop_name6,vs.stop_code stop_code6
+            ,dr42.stop_sn4,dr42.stop_name4,dr42.route_id route_id42,dr42.route_name route_name42
+            ,dr42.stop_sn2,dr42.stop_name2,dr42.stop_code2
+            ,dr42.stop_code4,dr42.route_dist route_dist42,dr42.stop_id4,dr42.stop_geo2,dr42.route_geo route_geo42
+            ,dr42.stop_id2,dr42.stop_geo4,vs.bus_stop_id stop_id6,vs.stop_geo stop_geo6 
+        from dr42 inner join vs on dr42.stop_code4=vs.stop_code and dr42.route_id!=vs.bus_route_id   
+    ) rs6 on rs5.route_id56=rs6.route_id56 and rs5.stop_sn5&lt;rs6.stop_sn6 
+    inner join bus_route r on rs5.route_id56=r.id
+    order by rs5.route_dist13+route_dist56+rs6.route_dist42 
+   ) tr2 where rn&lt;11
+  )
+  
+select * from (
+  select rn,1 sn,tr2.stop_sn1,tr2.stop_name1,tr2.route_name13 name,tr2.stop_sn3 stop_sn2,tr2.stop_name3 stop_name2
+                ,tr2.stop_id1,tr2.stop_code1,tr2.route_id13 id,tr2.stop_id3 stop_id2,tr2.stop_code3 stop_code2
+                ,tr2.stop_geo1,tr2.route_geo13 geometry,tr2.stop_geo3 stop_geo2,tr2.route_dist13 distance from tr2
+   union all
+  select rn,2 sn,tr2.stop_sn5,tr2.stop_name5,tr2.route_name56,tr2.stop_sn6,tr2.stop_name6 
+                ,tr2.stop_id5,tr2.stop_code5,tr2.route_id56,tr2.stop_id6,tr2.stop_code6
+                ,tr2.stop_geo5,tr2.route_geo56,tr2.stop_geo4,tr2.route_dist56 from tr2
+   union all 
+  select rn,2 sn,tr2.stop_sn4,tr2.stop_name4,tr2.route_name42,tr2.stop_sn2,tr2.stop_name2
+                ,tr2.stop_id4,tr2.stop_code4,tr2.route_id42,tr2.stop_id2,tr2.stop_code2
+                ,tr2.stop_geo5,tr2.route_geo56,tr2.stop_geo4,tr2.route_dist56 from tr2
+) t order by rn,sn        
+ 
+  </select>
+
+</mapper>

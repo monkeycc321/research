@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="edu.swfu.routeplanning.mapper.BusRouteMapper">
+ 
+  <resultMap id="BaseResultMap" type="edu.swfu.routeplanning.entity.BusRoute">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result property="geometry" column="geometry" javaType="edu.swfu.gis.entity.TGeometry" jdbcType="STRUCT" />
+    <result column="price" jdbcType="FLOAT" property="price" />
+    <result column="firstTime" jdbcType="CHAR" property="firstTime" />
+    <result column="finalTime" jdbcType="CHAR" property="finalTime" />
+  </resultMap>
+
+  
+  <insert id="insert" parameterType="edu.swfu.routeplanning.entity.BusRoute">
+   insert into bus_route(id, name,price,first_time,final_time,notes )
+    values (#{id,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}
+    ,#{price,jdbcType=FLOAT},#{firstTime,jdbcType=CHAR},#{finalTime,jdbcType=CHAR},#{notes,jdbcType=CLOB})
+  </insert> 
+  
+  <update id="iniRouteGeo" parameterType="java.util.HashMap" statementType="CALLABLE">
+		{call iniRouteGeo(#{id,mode=IN,jdbcType=VARCHAR},#{error,mode=OUT,jdbcType=VARCHAR})}
+  </update>
+
+  
+  <update id="updateByPrimaryKey" parameterType="edu.swfu.routeplanning.entity.BusRoute">
+    update bus_route
+    set
+      name =#{name,jdbcType=VARCHAR},
+      geometry =#{geometry,javaType=edu.swfu.gis.entity.TGeometry,jdbcType=STRUCT},
+      price =#{price,jdbcType=FLOAT},
+      first_Time =#{firstName,jdbcType=VARCHAR},
+      final_Time =#{finalName,jdbcType=VARCHAR}
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from bus_route
+    where id = #{id,jdbcType=INTEGER}
+  </delete>
+   
+  
+   <select id="select" resultMap="BaseResultMap" parameterType="edu.swfu.core.util.TQueryPara" >
+    select * from bus_route
+    <if test="exps != null and exps.size>0" >
+      WHERE
+      <foreach collection="exps" item="exp" index="index" open="" separator=" and " close="">
+        ${exp.key} ${exp.op}   #{exp.val}
+      </foreach>
+    </if>
+    order by id 
+  </select>   
+
+
+
+
+</mapper>

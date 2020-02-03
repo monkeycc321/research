@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="edu.swfu.routeplanning.mapper.BusRoutePointMapper">
+  <resultMap id="BaseResultMap" type="edu.swfu.routeplanning.entity.BusRoutePoint">
+    <id column="id" jdbcType="INTEGER" property="id" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result property="geometry" column="geometry" javaType="oracle.spatial.geometry.JGeometry" jdbcType="STRUCT" />
+  </resultMap>
+  
+  <insert id="insert" parameterType="edu.swfu.routeplanning.entity.BusRoutePoint">
+
+    insert into bus_route_point(id, name,geometry,bus_Route_Id,notes )
+    values(#{id,jdbcType=INTEGER}, #{name,jdbcType=VARCHAR}, #{geometry,javaType=edu.swfu.gis.entity.TGeometry,jdbcType=STRUCT},#{busRouteId,jdbcType=VARCHAR},#{notes,jdbcType=VARCHAR})
+  </insert> 
+  
+  <update id="updateByPrimaryKey" parameterType="edu.swfu.routeplanning.entity.BusRoutePoint">
+    update bus_stop
+    set
+      name =#{name,jdbcType=VARCHAR},
+      geometry =#{geometry,javaType=edu.swfu.gis.entity.TGeometry,jdbcType=STRUCT},
+      alias =#{alias,jdbcType=VARCHAR}
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from bus_stop
+    where id = #{id,jdbcType=INTEGER}
+  </delete>
+  
+  <!-- 
+  <select id="select" resultType="BaseResultMap" parameterType="edu.swfu.core.util.TQueryPara" >
+    select * from bus_stop
+    <if test="exps != null and exps.size>0" >
+      WHERE
+      <foreach collection="exps" item="exp" index="index" open="" separator=" and " close="">
+        ${exp.key} ${exp.op}   #{exp.val}
+      </foreach>
+    </if>
+  </select>   
+
+   <select id="selectAll" resultMap="BaseResultMap">
+    select id, name,geometry  from bus_Stop
+  </select>
+    -->
+  
+</mapper>

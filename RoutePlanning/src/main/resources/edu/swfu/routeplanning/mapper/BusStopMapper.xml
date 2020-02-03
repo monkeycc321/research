@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="edu.swfu.routeplanning.mapper.BusStopMapper">
+  <resultMap id="BaseResultMap" type="edu.swfu.routeplanning.entity.BusStop">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="code" jdbcType="VARCHAR" property="code" />
+    <result property="geometry" column="geometry" javaType="edu.swfu.gis.entity.TGeometry" jdbcType="STRUCT" />
+  </resultMap>
+  
+  <insert id="insert" parameterType="edu.swfu.routeplanning.entity.BusStop">
+    insert into bus_stop (id, name,code,geometry,alias,notes )
+    select #{id,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR},#{code,jdbcType=VARCHAR}, #{geometry,javaType=edu.swfu.gis.entity.TGeometry,jdbcType=STRUCT},#{alias,jdbcType=VARCHAR},#{notes,jdbcType=VARCHAR}
+      from (
+        select count(id) cn from bus_stop  where id =#{id,jdbcType=VARCHAR} 
+       ) t where t.cn=0
+  </insert> 
+  
+  <update id="updateByPrimaryKey" parameterType="edu.swfu.routeplanning.entity.BusStop">
+    update bus_stop
+    set
+      name =#{name,jdbcType=VARCHAR},
+      code =#{code,jdbcType=VARCHAR},
+      geometry =#{geometry,javaType=edu.swfu.gis.entity.TGeometry,jdbcType=STRUCT},
+      alias =#{alias,jdbcType=VARCHAR}
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from bus_stop
+    where id = #{id,jdbcType=INTEGER}
+  </delete>
+  
+  <select id="getStopId" resultType="java.lang.String" parameterType="java.util.HashMap">
+   	  select getStopId(#{name,jdbcType=VARCHAR},#{geometry,javaType=edu.swfu.gis.entity.TGeometry,jdbcType=STRUCT}) from dual
+  </select>
+  
+  <select id="getStopCode" resultType="java.lang.String" parameterType="java.util.HashMap">
+   	  select getStopCode(#{geometry,javaType=edu.swfu.gis.entity.TGeometry,jdbcType=STRUCT}) from dual
+  </select>
+  
+  <select id="selectByRoute" resultMap="BaseResultMap" parameterType="edu.swfu.core.util.TQueryPara" >
+    select * from bus_stop s inner join bus_route_stop rs on s.id=rs.bus_stop_id
+    <if test="exps != null and exps.size>0" >
+      WHERE
+      <foreach collection="exps" item="exp" index="index" open="" separator=" and " close="">
+        ${exp.key} ${exp.op}   #{exp.val}
+      </foreach>
+    </if>
+    order by rs.sn
+  </select>   
+  
+  <!-- 
+  <select id="select" resultType="BaseResultMap" parameterType="edu.swfu.core.util.TQueryPara" >
+    select * from bus_stop
+    <if test="exps != null and exps.size>0" >
+      WHERE
+      <foreach collection="exps" item="exp" index="index" open="" separator=" and " close="">
+        ${exp.key} ${exp.op}   #{exp.val}
+      </foreach>
+    </if>
+  </select>   
+
+   <select id="selectAll" resultMap="BaseResultMap">
+    select id, name,geometry  from bus_Stop
+  </select>
+    -->
+  
+</mapper>

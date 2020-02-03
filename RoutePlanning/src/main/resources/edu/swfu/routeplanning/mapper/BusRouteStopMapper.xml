@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="edu.swfu.routeplanning.mapper.BusRouteStopMapper">
+  <resultMap id="BaseResultMap" type="edu.swfu.routeplanning.entity.BusRouteStop">
+    <id column="bus_stop_id" jdbcType="VARCHAR" property="id" />
+    <result column="bus_stop_name" jdbcType="VARCHAR" property="name" />
+    <result property="geometry" column="geometry" javaType="oracle.spatial.geometry.JGeometry" jdbcType="STRUCT" />
+    <result column="bus_Route_Id" jdbcType="VARCHAR" property="busRouteId" />
+    <result column="bus_Route_Name" jdbcType="VARCHAR" property="busRouteName" />
+    <result column="sn" jdbcType="INTEGER" property="sn" />
+  </resultMap>
+  
+  
+  <insert id="insert" parameterType="edu.swfu.routeplanning.entity.BusRouteStop">
+    insert into bus_route_stop(bus_route_id, bus_stop_id,sn )
+    values(#{busRouteId,jdbcType=VARCHAR},#{id,jdbcType=VARCHAR}, #{sn,javaType=INTEGER} )
+
+    
+  </insert> 
+  
+  <update id="updateByPrimaryKey" parameterType="edu.swfu.routeplanning.entity.BusRouteStop">
+    update bus_route_stop
+    set
+      sn = #{sn,javaType=INTEGER}
+    where bus_route_id =#{busRouteId,jdbcType=VARCHAR} and bus_stop_id=#{id,jdbcType=VARCHAR}
+  </update>
+
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from bus_route_stop
+    where bus_route_id =#{busRouteId,jdbcType=VARCHAR} and bus_stop_id=#{id,jdbcType=VARCHAR}
+  </delete>
+   <!-- 
+   <select id="select" resultType="BaseResultMap" parameterType="edu.swfu.core.util.TQueryPara" >
+    select * from busroute
+    <if test="exps != null and exps.size>0" >
+      WHERE
+      <foreach collection="exps" item="exp" index="index" open="" separator=" and " close="">
+        ${exp.key} ${exp.op}   #{exp.val}
+      </foreach>
+    </if>
+  </select>   
+
+ 
+  <select id="selectAll" resultMap="BaseResultMap">
+    select * from busroute
+  </select>
+   -->
+
+</mapper>
